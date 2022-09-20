@@ -33,32 +33,30 @@ def parse_args():
     return args
 
 def main(args):
-    
+
 
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", use_auth_token=True)
     pipe = pipe.to(args.device)
 
-    generator = torch.Generator("cpu").manual_seed(args.seed)
-    
+    generator = torch.Generator("cuda" if args.device=="cuda" else "cpu").manual_seed(args.seed) 
     ## warm up
     with torch.autocast("cuda") if args.mp else nullcontext():
-        _ = pipe(args.prompt, num_inference_steps=1).images[0]
+        if args.device=="mps":        
+            _ = pipe(args.prompt, num_inference_steps=1).images[0]
 
         ## actual loop
         results = []
         for _ in range(args.n):
-            _ = pipe(args.prompt, 
+            img = pipe(args.prompt, 
                     num_inference_steps=args.steps, 
                     guidance_scale=args.scale,
-                    generator=generator)["sample"][0]
+                    generator=generator).images[0]
 
             results.append(img)
-
     if args.log:
         table = wandb.Table(columns=["prompt", "image"])
         for img in results:
-            pil_img = Image.fromarray(img[0])
-            table.add_data(args.prompt, wandb.Image(pil_img))
+            table.add_data(args.prompt, wandb.Image(img))
         wandb.log({"Inference_results":table})
 
 if __name__ == "__main__":
