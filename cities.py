@@ -21,7 +21,6 @@ def parse_args():
     parser.add_argument("--steps",type=int,default=defaults.steps,help="number of ddim sampling steps")
     parser.add_argument("--temp",type=float,default=defaults.temp,help="temperature")
     parser.add_argument("--seed",type=int,default=defaults.seed,help="random seed")
-    parser.add_argument("--mp", action="store_true", help="mp")
     parser.add_argument("--log", action="store_true", help="log result to wandb")
     parser.add_argument("--n", type=int, default=-1, help="number of artists to do")
     parser.add_argument("--extras",type=str,default=" ",help="to append to prompt")
@@ -44,7 +43,7 @@ def main(args):
     pipe = pipe.to(args.device)
 
     def run_inference(prompt):
-        with torch.autocast("cuda") if args.mp else nullcontext():
+        with torch.autocast("cuda") if args.device == "cuda" else nullcontext():
             img = pipe(prompt, 
                        num_inference_steps=args.steps, 
                        guidance_scale=args.scale,
@@ -73,6 +72,6 @@ def main(args):
 
 if __name__ == "__main__":
     args = parse_args()
-
+    args.device = "cuda" if torch.cuda.is_available() else "cpu"
     with wandb.init(project=PROJECT, job_type=JOB_TYPE, group=GROUP, config=args):
         main(args)
