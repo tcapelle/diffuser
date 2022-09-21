@@ -34,7 +34,7 @@ def main(args):
                "Norman Foster, Renzo Piano, Santiago Calatrava, Zaha Hadid, Oscar Niemeyer, Rem Koolhas, Jeanne Gang"
                "Daniel Burnham, Gordon Bunshaft, Shigeru Ban, Le Corbusier").split(",")
 
-    buildings = "A detached family house, A corporate building".split(",")
+    buildings = "A family house with wood accents, A family house with a balcony and external stairs".split(",")
 
     # load model
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", use_auth_token=True)
@@ -42,7 +42,9 @@ def main(args):
 
     def run_inference(prompt, seed):
         with torch.autocast("cuda") if args.device == "cuda" else nullcontext():
-            img = pipe(prompt, 
+            img = pipe(prompt,
+                       height=args.H,
+                       width=args.W,
                        num_inference_steps=args.steps, 
                        guidance_scale=args.scale,
                        generator=torch.Generator("cuda" if args.device=="cuda" else "cpu").manual_seed(seed)).images[0]
