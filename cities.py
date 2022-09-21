@@ -36,7 +36,7 @@ def main(args):
                "Diego Rivera, Frida Kahlo, Samy Benmayor, Oswaldo Guayasamín, Roberto Matta, Pedro Lira,"
                "John Martin, Dawid Jurek, Claude Monet, Vincent Van Gogh, Alan Lee, Beksiński").split(",")
 
-    cities = "Santiago in Chile, Valparaiso in Chile".split(",")
+    cities = "Santiago in Chile, Valparaiso in Chile, Lyon in France".split(",")
 
     # load model
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", use_auth_token=True)
