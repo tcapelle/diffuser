@@ -42,19 +42,19 @@ def main(args):
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", use_auth_token=True)
     pipe = pipe.to(args.device)
 
-    def run_inference(prompt):
+    def run_inference(prompt, seed):
         with torch.autocast("cuda") if args.device == "cuda" else nullcontext():
             img = pipe(prompt, 
                        num_inference_steps=args.steps, 
                        guidance_scale=args.scale,
-                       generator=torch.Generator("cuda" if args.device=="cuda" else "cpu").manual_seed(args.seed)).images[0]
+                       generator=torch.Generator("cuda" if args.device=="cuda" else "cpu").manual_seed(seed)).images[0]
         return img
     
     results = []
     for artist in artists[:args.n]:
         for city in cities:
             prompt = f"The city of {city} by {artist} {args.extras}"
-            pil_img = run_inference(prompt)
+            pil_img = run_inference(prompt, random.randint(-1e10, 1e10))
             results.append([prompt, pil_img, artist, city])
             
             
