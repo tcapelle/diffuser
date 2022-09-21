@@ -27,6 +27,7 @@ def parse_args():
     parser.add_argument("--seed",type=int,default=defaults.seed,help="random seed")
     parser.add_argument("--mp", action="store_true", help="mp")
     parser.add_argument("--log", action="store_true", help="log result to wandb")
+    parser.add_argument("--coreml", action="store_true", help="use core ml")
     parser.add_argument("--n", type=int, default=1, help="number of runs")
     parser.add_argument("--device", type=str, default="cpu", help="device")
     args = parser.parse_args()
@@ -34,17 +35,19 @@ def parse_args():
 
 def main(args):
 
-
     pipe = StableDiffusionPipeline.from_pretrained("CompVis/stable-diffusion-v1-4", use_auth_token=True)
-    pipe = pipe.to(args.device)
+    if not args.coreml:
+        pipe = pipe.to(args.device)
+    
 
     generator = torch.Generator("cuda" if args.device=="cuda" else "cpu").manual_seed(args.seed) 
     ## warm up
     with torch.autocast("cuda") if args.mp else nullcontext():
-        if args.device=="mps":        
-            _ = pipe(args.prompt, num_inference_steps=1).images[0]
+        if args.coreml:
+            from coreml_hack import UNetWrapper
+            pipe.safety_checker = lambda images, **kwargs: (images, False)
+            pipe.unet = UNetWrapper(pipe.unet)
 
-        ## actual loop
         results = []
         for _ in range(args.n):
             img = pipe(args.prompt, 
@@ -58,6 +61,7 @@ def main(args):
         for img in results:
             table.add_data(args.prompt, wandb.Image(img))
         wandb.log({"Inference_results":table})
+
 
 if __name__ == "__main__":
     args = parse_args()
