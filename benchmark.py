@@ -1,10 +1,11 @@
 import wandb
-import argparse, random
-from PIL import Image
+import argparse, sys
+from types import SimpleNamespace
 import torch
 from contextlib import nullcontext
 from types import SimpleNamespace
 
+import diffusers
 from diffusers import StableDiffusionPipeline
 
 
@@ -14,6 +15,19 @@ GROUP = "pytorch"
 
 
 defaults = SimpleNamespace(H=512, W=512, steps=20, scale=7.2, temp=1, seed=42)
+
+def grab_setup():
+    s = {}
+    s["wandb_version"] = wandb.__version__
+    s["python_version"] = sys.version.split("|")[0].replace(" ", "")
+    s["torch_version"] = torch.__version__
+    try:
+        import coremltools
+        s["coreml_version"] = coremltools.__version__
+    except:
+        pass
+    s["diffusers_version"] = diffusers.__version__
+    return s
 
 
 def parse_args():
@@ -30,6 +44,8 @@ def parse_args():
     parser.add_argument("--coreml", action="store_true", help="use core ml")
     parser.add_argument("--n", type=int, default=1, help="number of runs")
     parser.add_argument("--device", type=str, default="cpu", help="device")
+    parser.add_argument("--tags", type=str, default="", help="tags")
+    parser.add_argument("--bs", type=int, default=1, help="batch size")
     args = parser.parse_args()
     return args
 
@@ -50,7 +66,7 @@ def main(args):
 
         results = []
         for _ in range(args.n):
-            img = pipe(args.prompt, 
+            img = pipe([args.prompt]*args.bs, 
                     num_inference_steps=args.steps, 
                     guidance_scale=args.scale,
                     generator=generator).images[0]
@@ -64,7 +80,9 @@ def main(args):
 
 
 if __name__ == "__main__":
-    args = parse_args()
+    args = vars(parse_args())
+    args.update(grab_setup())
+    args = SimpleNamespace(**args)
 
     with wandb.init(project=PROJECT, job_type=JOB_TYPE, group=GROUP, config=args):
         main(args)
